@@ -190,9 +190,9 @@ export default class CreateNewFileCommand extends WorkspaceCommand {
 
 				// When looking at a folder, create items within the folder
 				let folder = item.fileType === 'folder' ? item : directoryStore.getParent(item)
-				// `getParent()` misses for a node the store holds no parent entry for:
-				// a root, or one removed since it was selected. Reading `.depth` off
-				// that throws, which a tooltip must not do.
+				// A non-folder item the store has no parent entry for -- one removed
+				// since it was selected -- leaves `folder` undefined, and the next
+				// line reads `.depth` off it. A tooltip skips it instead.
 				if (!interactive && !folder) continue
 
 				if (!deepestFolder || deepestFolder.depth > folder.depth) {
