@@ -140,7 +140,7 @@ describe('Extension auto inclusion', () => {
 		expect(command.getTooltip()).toBe('Creates a new note in the root of the workspace.')
 
 		selection.value = [unicodeFolder]
-		expect(command.getTooltip()).toBe('Creates a new note in Ideas/研究.')
+		expect(command.getTooltip()).toBe('Creates a new note in "Ideas/研究".')
 	})
 
 	it('Does not claim invalid destinations from reserved or invalid inputs', () => {
@@ -148,15 +148,15 @@ describe('Extension auto inclusion', () => {
 			name: 'private', path: 'some/root/.tangent/private', depth: 3, fileType: 'folder'
 		}]
 		expect(command.getTooltip()).toBe('Creates a new note in the root of the workspace.')
-		expect(command.getTooltip({ relativePath: 'CON/New Note.md' })).toBe('Creates a new note')
+		expect(command.getTooltip({ relativePath: 'CON/New Note.md' })).toBe('Creates a new note.')
 	})
 
 	it('Updates the destination for path and explicit-folder contexts', () => {
 		workspace.viewState.directoryView.selection.value = [unicodeFolder]
 		expect(command.getTooltip({ relativePath: 'Projects/Long Term/New Note.md' }))
-			.toBe('Creates a new note in Projects/Long Term.')
+			.toBe('Creates a new note in "Projects/Long Term".')
 		expect(command.getTooltip({ folder: ideasFolder }))
-			.toBe('Creates a new note in Ideas.')
+			.toBe('Creates a new note in "Ideas".')
 	})
 
 	it('Names the rule when it has no description of its own', () => {
@@ -166,7 +166,7 @@ describe('Extension auto inclusion', () => {
 				name: 'Journal', nameTemplate: 'Daily', folder: 'Journal', contentTemplate: '',
 				mode: 'create', description: ''
 			}
-		})).toBe('Creates a new Journal in Journal.')
+		})).toBe('Creates a new Journal in "Journal".')
 	})
 
 	it('Preserves rule descriptions and resolves rule destination precedence', () => {
@@ -182,8 +182,7 @@ describe('Extension auto inclusion', () => {
 		const beforeSelection = workspace.viewState.directoryView.selection.value
 		const beforeEffects = { ...effects }
 		const tooltip = command.getTooltip(context)
-		expect(tooltip).toContain('A custom journal description')
-		expect(tooltip).toContain('Destination: Ideas')
+		expect(tooltip).toBe('A custom journal description\nDestination: "Ideas".')
 		expect(command.getTooltip(context)).toBe(tooltip)
 		expect(context).toEqual(before)
 		expect(workspace.viewState.directoryView.selection.value).toBe(beforeSelection)
@@ -197,7 +196,7 @@ describe('Extension auto inclusion', () => {
 			contentTemplate: '', mode: 'create', description: ''
 		}
 		const beforeEffects = { ...effects }
-		expect(command.getTooltip({ rule })).toBe('Creates a new Meeting in Notes/Meetings.')
+		expect(command.getTooltip({ rule })).toBe('Creates a new Meeting in "Notes/Meetings".')
 		expect(effects).toEqual(beforeEffects)
 
 		// The same rule through the interactive path still asks for the name
@@ -205,15 +204,24 @@ describe('Extension auto inclusion', () => {
 		expect(effects.modal).toBe(beforeEffects.modal + 1)
 	})
 
-	it('Claims no destination when the typed name would choose the folder', () => {
+	it('Names the folder the template fixes when the typed name adds more', () => {
 		workspace.viewState.directoryView.selection.value = []
 		const beforeEffects = { ...effects }
+		// "%name%/Entry" puts the file in Notes/<typed name>, so "Notes" is the
+		// deepest folder that is known before the name is typed
 		expect(command.getTooltip({
 			rule: {
 				name: 'Entry', nameTemplate: '%name%/Entry', folder: 'Notes',
 				contentTemplate: '', mode: 'create', description: ''
 			}
-		})).toBe('Creates a new Entry')
+		})).toBe('Creates a new Entry in "Notes".')
+		// The segments before the token are still fixed and are still named
+		expect(command.getTooltip({
+			rule: {
+				name: 'Entry', nameTemplate: 'Archive/%name%/Entry', folder: 'Notes',
+				contentTemplate: '', mode: 'create', description: ''
+			}
+		})).toBe('Creates a new Entry in "Notes/Archive".')
 		expect(effects).toEqual(beforeEffects)
 	})
 })

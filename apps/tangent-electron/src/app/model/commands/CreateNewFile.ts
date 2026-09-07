@@ -107,12 +107,14 @@ export default class CreateNewFileCommand extends WorkspaceCommand {
 				}
 				else if (nameResult !== null) {
 					if (!interactive) {
-						// Resolving for a preview, so the typed name is unknown. Anything
-						// after the token would turn that name into a folder, and no
-						// destination can be claimed; otherwise the folder is fixed by the
-						// template and a placeholder name resolves it.
-						if (/[\\/]/.test(nameResult.postName)) return
-						name = nameFromRule(rule, 'New Note') as string
+						// Resolving for a preview, so the typed name is unknown and a
+						// placeholder stands in for it. A separator after the token would
+						// make the typed name a folder; dropping that suffix resolves to
+						// the deepest folder the template still fixes.
+						const { preName, postName } = nameResult
+						name = /[\\/]/.test(postName)
+							? preName + 'New Note'
+							: preName + 'New Note' + postName
 					}
 					else {
 						const { preName, postName } = nameResult
@@ -188,8 +190,9 @@ export default class CreateNewFileCommand extends WorkspaceCommand {
 
 				// When looking at a folder, create items within the folder
 				let folder = item.fileType === 'folder' ? item : directoryStore.getParent(item)
-				// A parentless item cannot contribute a folder. Only the side-effect-free
-				// path skips it; execute() keeps whatever it does with one today.
+				// `getParent()` misses for a node the store holds no parent entry for:
+				// a root, or one removed since it was selected. Reading `.depth` off
+				// that throws, which a tooltip must not do.
 				if (!interactive && !folder) continue
 
 				if (!deepestFolder || deepestFolder.depth > folder.depth) {
@@ -403,15 +406,15 @@ export default class CreateNewFileCommand extends WorkspaceCommand {
 		const subject = rule ? 'a new ' + rawOrStoreValue(rule.name) : 'a new note'
 
 		const values = this.resolveContext(context ?? {}, { interactive: false })
-		if (!values) return description || 'Creates ' + subject
+		if (!values) return description || `Creates ${subject}.`
 
 		const { folderPath } = values
 		const destination = !folderPath || folderPath === '.'
 			? 'the root of the workspace'
-			: folderPath
+			: `"${folderPath}"`
 
 		if (description) {
-			return `${description}\nDestination: ${destination}`
+			return `${description}\nDestination: ${destination}.`
 		}
 		return `Creates ${subject} in ${destination}.`
 	}
